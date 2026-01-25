@@ -4,6 +4,7 @@ import type {
   Course,
   PaginatedCourses,
   CourseFilters,
+  CreateCourseInput,
   User,
   UpdateUserInput,
   UserCeuTracking,
@@ -22,18 +23,29 @@ const apiClient = axios.create({
   },
 });
 
-// Function to set auth token (will be called by Clerk auth hook)
-let authToken: string | null = null;
+// Function to get fresh token (will be set by Clerk auth hook)
+let getTokenFn: (() => Promise<string | null>) | null = null;
 
-export const setAuthToken = (token: string | null) => {
-  authToken = token;
+export const setGetTokenFn = (fn: (() => Promise<string | null>) | null) => {
+  getTokenFn = fn;
 };
 
-// Add auth interceptor
-apiClient.interceptors.request.use((config) => {
-  // Get token from Clerk session
-  if (authToken) {
-    config.headers.Authorization = `Bearer ${authToken}`;
+// Legacy function for backwards compatibility
+export const setAuthToken = (_token: string | null) => {
+  // No longer used - tokens are fetched fresh for each request
+};
+
+// Add auth interceptor that gets fresh token for each request
+apiClient.interceptors.request.use(async (config) => {
+  if (getTokenFn) {
+    try {
+      const token = await getTokenFn();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (error) {
+      console.error('Failed to get auth token:', error);
+    }
   }
   return config;
 });
@@ -65,6 +77,14 @@ export const courseApi = {
       return response.data.data;
     }
     throw new Error(response.data.error || 'Failed to fetch course');
+  },
+
+  createCourse: async (input: CreateCourseInput): Promise<Course> => {
+    const response = await apiClient.post<ApiResponse<Course>>('/courses', input);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to create course');
   },
 };
 
@@ -110,6 +130,13 @@ export const trackingApi = {
       return response.data.data;
     }
     throw new Error(response.data.error || 'Failed to update tracking');
+  },
+
+  deleteTracking: async (id: string): Promise<void> => {
+    const response = await apiClient.delete<ApiResponse<void>>(`/tracking/${id}`);
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to delete tracking');
+    }
   },
 
   getCompliance: async (year?: number): Promise<ComplianceSummary> => {

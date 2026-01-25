@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { SignedIn, SignedOut, RedirectToSignIn, SignIn, useAuth } from '@clerk/clerk-react';
 import { Toaster } from 'react-hot-toast';
 import { useEffect } from 'react';
-import { setAuthToken } from './services/api';
+import { setGetTokenFn } from './services/api';
 import CourseDiscovery from './pages/CourseDiscovery';
 import CourseDetail from './pages/CourseDetail';
 import Dashboard from './pages/Dashboard';
@@ -15,17 +15,12 @@ function AppContent() {
 
   useEffect(() => {
     if (isSignedIn) {
-      const updateToken = async () => {
-        const token = await getToken();
-        setAuthToken(token);
-      };
-      updateToken();
-      // Set up periodic token refresh
-      const interval = setInterval(updateToken, 5 * 60 * 1000); // Refresh every 5 minutes
-      return () => clearInterval(interval);
+      // Pass the getToken function so each API request gets a fresh token
+      setGetTokenFn(() => getToken());
     } else {
-      setAuthToken(null);
+      setGetTokenFn(null);
     }
+    return () => setGetTokenFn(null);
   }, [getToken, isSignedIn]);
 
   return (

@@ -137,11 +137,20 @@ export const updateTracking = async (req: AuthRequest, res: Response): Promise<v
     if (input.status !== undefined) updateData.status = input.status;
     if (input.completedDate !== undefined) updateData.completedDate = input.completedDate;
     if (input.creditsEarned !== undefined) updateData.creditsEarned = input.creditsEarned;
+    if (input.progressPercent !== undefined) updateData.progressPercent = input.progressPercent;
     if (input.notes !== undefined) updateData.notes = input.notes;
 
-    // If marking as completed, set completed date if not provided
-    if (input.status === 'completed' && !input.completedDate) {
-      updateData.completedDate = new Date();
+    // If marking as completed, set completed date and progress to 100%
+    if (input.status === 'completed') {
+      if (!input.completedDate) {
+        updateData.completedDate = new Date();
+      }
+      updateData.progressPercent = 100;
+    }
+
+    // If moving back to planned, reset progress to 0
+    if (input.status === 'planned') {
+      updateData.progressPercent = 0;
     }
 
     const tracking = await prisma.userCeuTracking.update({
@@ -156,9 +165,16 @@ export const updateTracking = async (req: AuthRequest, res: Response): Promise<v
       },
     });
 
-    // Update compliance if course was completed
-    if (input.status === 'completed' || (existing.status !== 'completed' && input.status === 'completed')) {
-      const year = new Date().getFullYear();
+    // Update compliance if status changed to or from completed
+    const wasCompleted = existing.status === 'completed';
+    const isNowCompleted = input.status === 'completed';
+    const statusChanged = input.status !== undefined && input.status !== existing.status;
+
+    if (statusChanged && (wasCompleted || isNowCompleted)) {
+      // Use the completedDate year if available, otherwise use current year
+      const year = existing.completedDate
+        ? new Date(existing.completedDate).getFullYear()
+        : new Date().getFullYear();
       await complianceService.updateCompliance(userId, year);
     }
 
@@ -177,6 +193,49 @@ export const updateTracking = async (req: AuthRequest, res: Response): Promise<v
   }
 };
 
+export const deleteTracking = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.userId!;
+    const { id } = req.params;
+
+    // Verify ownership
+    const existing = await prisma.userCeuTracking.findFirst({
+      where: {
+        id,
+        userId,
+      },
+    });
+
+    if (!existing) {
+      res.status(404).json({
+        success: false,
+        error: 'Tracking not found',
+      });
+      return;
+    }
+
+    await prisma.userCeuTracking.delete({
+      where: { id },
+    });
+
+    // Update compliance if the deleted course was completed
+    if (existing.status === 'completed' && existing.completedDate) {
+      const year = new Date(existing.completedDate).getFullYear();
+      await complianceService.updateCompliance(userId, year);
+    }
+
+    res.json({
+      success: true,
+    });
+  } catch (error) {
+    console.error('Error deleting tracking:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete tracking',
+    });
+  }
+};
+
 function mapToTracking(tracking: any): UserCeuTracking {
   return {
     id: tracking.id,
@@ -185,6 +244,7 @@ function mapToTracking(tracking: any): UserCeuTracking {
     completedDate: tracking.completedDate,
     creditsEarned: tracking.creditsEarned,
     status: tracking.status,
+    progressPercent: tracking.progressPercent ?? 0,
     notes: tracking.notes,
     course: tracking.course
       ? {

@@ -1,6 +1,6 @@
 import { prisma } from '../lib/prisma';
-import { Course, CourseFilters, PaginatedCourses } from '@ceu/types';
-import { Prisma } from '@prisma/client';
+import { Course, CourseFilters, PaginatedCourses, CreateCourseInput } from '@ceu/types';
+import { Prisma, CourseField } from '@prisma/client';
 
 export class CourseService {
   async getCourses(
@@ -10,7 +10,12 @@ export class CourseService {
   ): Promise<PaginatedCourses> {
     const skip = (page - 1) * pageSize;
 
-    const where: Prisma.CeuCourseWhereInput = {};
+    const where: Prisma.CeuCourseWhereInput = {
+      // Exclude manually added courses from discover page
+      provider: {
+        name: { not: 'Manual' },
+      },
+    };
 
     if (filters.field) {
       where.field = filters.field;
@@ -78,6 +83,46 @@ export class CourseService {
     });
 
     return course ? this.mapToCourse(course) : null;
+  }
+
+  async createCourse(input: CreateCourseInput): Promise<Course> {
+    // Get or create "Manual" provider for user-added courses
+    let manualProvider = await prisma.ceuProvider.findFirst({
+      where: { name: 'Manual' },
+    });
+
+    if (!manualProvider) {
+      manualProvider = await prisma.ceuProvider.create({
+        data: {
+          name: 'Manual',
+          baseUrl: 'manual://user-added',
+          active: true,
+        },
+      });
+    }
+
+    // Generate a unique URL for manual courses
+    const uniqueUrl = input.url || `manual://course-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    const course = await prisma.ceuCourse.create({
+      data: {
+        providerId: manualProvider.id,
+        title: input.title,
+        url: uniqueUrl,
+        field: input.field as CourseField,
+        credits: input.credits,
+        description: input.description,
+        instructors: input.instructors,
+        duration: input.duration,
+        category: input.category,
+        price: input.price,
+      },
+      include: {
+        provider: true,
+      },
+    });
+
+    return this.mapToCourse(course);
   }
 
   private mapToCourse(course: any): Course {

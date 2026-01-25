@@ -7,6 +7,7 @@ export interface UserCeuTracking {
   completedDate?: Date | null;
   creditsEarned?: number | null;
   status: CourseStatus;
+  progressPercent: number;
   notes?: string | null;
   course?: import('./course').Course;
   createdAt: Date;
@@ -23,5 +24,6 @@ export interface UpdateTrackingInput {
   status?: CourseStatus;
   completedDate?: Date | null;
   creditsEarned?: number | null;
+  progressPercent?: number;
   notes?: string;
 }

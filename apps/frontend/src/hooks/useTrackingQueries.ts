@@ -48,3 +48,16 @@ export function useUpdateTracking() {
     },
   });
 }
+
+export function useDeleteTracking() {
+  const queryClient = useQueryClient();
+  const currentYear = new Date().getFullYear();
+
+  return useMutation({
+    mutationFn: (id: string) => trackingApi.deleteTracking(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: trackingKeys.all });
+      queryClient.invalidateQueries({ queryKey: trackingKeys.compliance(currentYear) });
+    },
+  });
+}

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth';
-import { getTracking, createTracking, updateTracking } from '../controllers/trackingController';
+import { getTracking, createTracking, updateTracking, deleteTracking } from '../controllers/trackingController';
 import { complianceService } from '../services/complianceService';
 import { AuthRequest } from '../middleware/auth';
 import { Response } from 'express';
@@ -14,6 +14,7 @@ trackingRoutes.use(authenticate);
 trackingRoutes.get('/', getTracking);
 trackingRoutes.post('/', createTracking);
 trackingRoutes.put('/:id', updateTracking);
+trackingRoutes.delete('/:id', deleteTracking);
 
 trackingRoutes.get('/compliance', async (req: AuthRequest, res: Response): Promise<void> => {
   try {

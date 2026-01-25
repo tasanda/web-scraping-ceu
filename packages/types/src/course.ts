@@ -52,3 +52,15 @@ export interface PaginatedCourses {
   pageSize: number;
   totalPages: number;
 }
+
+export interface CreateCourseInput {
+  title: string;
+  field: CourseField;
+  credits?: string;
+  description?: string;
+  instructors?: string;
+  duration?: string;
+  category?: string;
+  url?: string;
+  price?: string;
+}

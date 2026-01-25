@@ -8,7 +8,7 @@ If you've already completed the initial setup, run these commands in **3 separat
 
 ```bash
 # Terminal 1: Database + Backend
-source venv/bin/activate
+source .venv/bin/activate
 docker-compose up -d postgres
 cd apps/backend && pnpm dev
 

@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { courseApi } from '../services/api';
-import type { CourseFilters } from '@ceu/types';
+import type { CourseFilters, CreateCourseInput } from '@ceu/types';
 
 export const courseKeys = {
   all: ['courses'] as const,
@@ -21,5 +21,16 @@ export function useCourse(id: string | undefined) {
     queryKey: courseKeys.detail(id!),
     queryFn: () => courseApi.getCourseById(id!),
     enabled: !!id,
+  });
+}
+
+export function useCreateCourse() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateCourseInput) => courseApi.createCourse(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: courseKeys.all });
+    },
   });
 }

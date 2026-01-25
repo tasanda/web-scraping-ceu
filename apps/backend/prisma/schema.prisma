@@ -88,15 +88,16 @@ model CeuCourse {
 }
 
 model UserCeuTracking {
-  id            String       @id @default(uuid())
-  userId        String
-  courseId      String
-  completedDate DateTime?
-  creditsEarned Float?
-  status        CourseStatus @default(planned)
-  notes         String?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id              String       @id @default(uuid())
+  userId          String
+  courseId        String
+  completedDate   DateTime?
+  creditsEarned   Float?
+  status          CourseStatus @default(planned)
+  progressPercent Int          @default(0)
+  notes           String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
   user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   course        CeuCourse    @relation(fields: [courseId], references: [id], onDelete: Cascade)

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { courseService } from '../services/courseService';
-import { CourseFilters, ApiResponse, Course, PaginatedCourses } from '@ceu/types';
+import { CourseFilters, ApiResponse, Course, PaginatedCourses, CreateCourseInput } from '@ceu/types';
 
 export const getCourses = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -63,6 +63,35 @@ export const getCourseById = async (req: Request, res: Response): Promise<void> 
     res.status(500).json({
       success: false,
       error: 'Failed to fetch course',
+    });
+  }
+};
+
+export const createCourse = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const input: CreateCourseInput = req.body;
+
+    if (!input.title || !input.field) {
+      res.status(400).json({
+        success: false,
+        error: 'Title and field are required',
+      });
+      return;
+    }
+
+    const course = await courseService.createCourse(input);
+
+    const response: ApiResponse<Course> = {
+      success: true,
+      data: course,
+    };
+
+    res.status(201).json(response);
+  } catch (error) {
+    console.error('Error creating course:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create course',
     });
   }
 };
