@@ -1,0 +1,107 @@
+steps:
+  # Build shared types package
+  - name: 'node:18'
+    id: 'build-types'
+    entrypoint: 'pnpm'
+    args: ['install']
+    dir: '.'
+  
+  - name: 'node:18'
+    id: 'build-types-package'
+    entrypoint: 'pnpm'
+    args: ['--filter', '@ceu/types', 'build']
+    waitFor: ['build-types']
+
+  # Build backend
+  - name: 'node:18'
+    id: 'build-backend'
+    entrypoint: 'pnpm'
+    args: ['--filter', '@ceu/backend', 'build']
+    waitFor: ['build-types-package']
+
+  # Build frontend
+  - name: 'node:18'
+    id: 'build-frontend'
+    entrypoint: 'pnpm'
+    args: ['--filter', '@ceu/frontend', 'build']
+    waitFor: ['build-types-package']
+
+  # Build backend Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'docker-build-backend'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/ceu-backend:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/ceu-backend:latest'
+      - '-f'
+      - 'apps/backend/Dockerfile'
+      - '.'
+    waitFor: ['build-backend']
+
+  # Build frontend Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'docker-build-frontend'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/ceu-frontend:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/ceu-frontend:latest'
+      - '-f'
+      - 'apps/frontend/Dockerfile'
+      - '.'
+    waitFor: ['build-frontend']
+
+  # Push backend image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-backend'
+    args: ['push', 'gcr.io/$PROJECT_ID/ceu-backend:$COMMIT_SHA']
+    waitFor: ['docker-build-backend']
+
+  # Push frontend image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-frontend'
+    args: ['push', 'gcr.io/$PROJECT_ID/ceu-frontend:$COMMIT_SHA']
+    waitFor: ['docker-build-frontend']
+
+  # Deploy backend to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-backend'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'ceu-backend'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/ceu-backend:$COMMIT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+    waitFor: ['push-backend']
+
+  # Deploy frontend to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-frontend'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'ceu-frontend'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/ceu-frontend:$COMMIT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+    waitFor: ['push-frontend']
+
+options:
+  machineType: 'E2_HIGHCPU_8'
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: '1200s'

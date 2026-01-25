@@ -1,0 +1,41 @@
+{
+  "name": "@ceu/types",
+  "version": "1.0.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./course": {
+      "types": "./dist/course.d.ts",
+      "default": "./dist/course.js"
+    },
+    "./user": {
+      "types": "./dist/user.d.ts",
+      "default": "./dist/user.js"
+    },
+    "./api": {
+      "types": "./dist/api.d.ts",
+      "default": "./dist/api.js"
+    },
+    "./tracking": {
+      "types": "./dist/tracking.d.ts",
+      "default": "./dist/tracking.js"
+    },
+    "./compliance": {
+      "types": "./dist/compliance.d.ts",
+      "default": "./dist/compliance.js"
+    }
+  }
+}

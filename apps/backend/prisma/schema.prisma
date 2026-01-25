@@ -1,0 +1,124 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CourseField {
+  mental_health
+  nursing
+  psychology
+  counseling
+  social_work
+  other
+}
+
+enum CourseStatus {
+  planned
+  in_progress
+  completed
+}
+
+enum ComplianceStatus {
+  compliant
+  non_compliant
+  in_progress
+}
+
+model User {
+  id                    String   @id @default(uuid())
+  email                 String   @unique
+  clerkId               String   @unique
+  profession            CourseField?
+  licenseNumber         String?
+  annualCeuRequirement  Int?
+  createdAt             DateTime @default(now())
+
+  tracking              UserCeuTracking[]
+  compliance            CeuCompliance[]
+
+  @@index([clerkId])
+  @@index([email])
+}
+
+model CeuProvider {
+  id       String  @id @default(uuid())
+  name     String
+  baseUrl  String
+  active   Boolean @default(true)
+
+  courses  CeuCourse[]
+
+  @@index([name])
+}
+
+model CeuCourse {
+  id          String      @id @default(uuid())
+  providerId  String
+  title       String
+  url         String      @unique
+  description String?
+  instructors String?
+  price       String?
+  originalPrice String?
+  credits     String?
+  duration    String?
+  category    String?
+  field       CourseField
+  date        String?
+  imageUrl    String?
+  scrapedAt   DateTime    @default(now())
+
+  provider    CeuProvider        @relation(fields: [providerId], references: [id])
+  tracking    UserCeuTracking[]
+
+  @@index([providerId])
+  @@index([field])
+  @@index([category])
+  @@index([scrapedAt])
+  @@index([url])
+  // REMOVE THIS LINE:
+  // @@fulltext([title, description])
+}
+
+model UserCeuTracking {
+  id            String       @id @default(uuid())
+  userId        String
+  courseId      String
+  completedDate DateTime?
+  creditsEarned Float?
+  status        CourseStatus @default(planned)
+  notes         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course        CeuCourse    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([userId])
+  @@index([courseId])
+  @@index([status])
+}
+
+model CeuCompliance {
+  id               String           @id @default(uuid())
+  userId           String
+  year             Int
+  requiredCredits  Int
+  earnedCredits    Float            @default(0)
+  complianceStatus ComplianceStatus @default(in_progress)
+  updatedAt        DateTime         @updatedAt
+
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, year])
+  @@index([userId])
+  @@index([year])
+}
