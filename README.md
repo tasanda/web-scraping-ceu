@@ -172,6 +172,40 @@ ngrok http 3001
 
 ---
 
+## Admin Access
+
+The application includes an admin dashboard for managing courses, providers, users, and compliance records. Admin access is controlled via Clerk's user metadata.
+
+### Making a User an Admin
+
+1. Go to [Clerk Dashboard](https://dashboard.clerk.com)
+2. Select your application
+3. Click **Users** in the left sidebar
+4. Find and click on the user you want to make an admin
+5. Scroll down to **Public metadata**
+6. Click **Edit** and add the following JSON:
+   ```json
+   {
+     "role": "admin"
+   }
+   ```
+7. Click **Save**
+
+The user will now see an "Admin" link in the navigation bar and have access to:
+- **Overview** - Dashboard statistics (total users, courses, providers, compliance status)
+- **Courses** - Edit or delete any course (title, credits, description, etc.)
+- **Providers** - Add, edit, or deactivate CEU providers
+- **Users** - View all users and their compliance status, manually adjust compliance records
+- **Manual Reviews** - Review and approve courses manually added by users
+
+### Removing Admin Access
+
+To remove admin access, either:
+- Delete the `role` key from the user's public metadata, or
+- Change the value to something other than `"admin"`
+
+---
+
 ## Crawler Setup
 
 The Scrapy crawler is located in `crawler/tutorial/`:
@@ -256,6 +290,19 @@ docker-compose down
 - `POST /api/tracking` - Add course to tracking
 - `PUT /api/tracking/:id` - Update tracking status
 - `GET /api/tracking/compliance` - Get compliance status
+
+### Admin (Protected - Admin Only)
+- `GET /api/admin/stats` - Get dashboard statistics
+- `GET /api/admin/users` - Get all users with compliance info
+- `GET /api/admin/courses` - Get all courses (with search/filter)
+- `PUT /api/admin/courses/:id` - Update a course
+- `DELETE /api/admin/courses/:id` - Delete a course
+- `GET /api/admin/courses/manual` - Get manually added courses for review
+- `GET /api/admin/providers` - Get all providers
+- `POST /api/admin/providers` - Create a provider
+- `PUT /api/admin/providers/:id` - Update a provider
+- `DELETE /api/admin/providers/:id` - Delete a provider
+- `PUT /api/admin/compliance/:userId/:year` - Adjust user compliance
 
 ---
 
