@@ -3,7 +3,7 @@ import { AuthRequest } from '../middleware/auth';
 import { adminService } from '../services/adminService';
 
 // Dashboard
-export const getStats = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getStats = async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
     const stats = await adminService.getStats();
     res.json({ success: true, data: stats });

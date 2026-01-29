@@ -199,7 +199,7 @@ export default function ProviderManager() {
       {isCreateOpen && (
         <ProviderModal
           title="Add Provider"
-          onSave={handleCreate}
+          onSave={(input) => handleCreate(input as AdminProviderCreate)}
           onClose={() => setIsCreateOpen(false)}
         />
       )}
