@@ -60,6 +60,8 @@ model User {
   planningPreferences   UserPlanningPreferences?
   studyPlans            StudyPlan[]
   completionHistory     CourseCompletionHistory[]
+  reviews               CourseReview[]
+  reviewHelpfulVotes    ReviewHelpful[]
 
   @@index([clerkId])
   @@index([email])
@@ -99,9 +101,13 @@ model CeuCourse {
   endDate              DateTime?
   registrationDeadline DateTime?
   scrapedAt            DateTime    @default(now())
+  // Cached rating stats (updated via trigger or service)
+  avgRating            Decimal?    @db.Decimal(2, 1)
+  reviewCount          Int         @default(0)
 
   provider    CeuProvider        @relation(fields: [providerId], references: [id])
   tracking    UserCeuTracking[]
+  reviews     CourseReview[]
 
   @@index([providerId])
   @@index([field])
@@ -110,6 +116,7 @@ model CeuCourse {
   @@index([url])
   @@index([courseType])
   @@index([startDate])
+  @@index([avgRating])
 }
 
 model UserCeuTracking {
@@ -227,4 +234,47 @@ model CourseCompletionHistory {
   @@index([userId])
   @@index([courseId])
   @@index([completedAt])
+}
+
+model CourseReview {
+  id               String      @id @default(uuid())
+  userId           String
+  courseId         String
+  rating           Int         // 1-5 stars
+  title            String?     // Optional review title
+  content          String?     // Review text
+  difficultyRating Int?        // 1-5 difficulty level
+  wouldRecommend   Boolean     @default(true)
+  isVerified       Boolean     @default(false) // True if user completed the course
+  helpfulCount     Int         @default(0)
+  isHidden         Boolean     @default(false) // Hidden by admin
+  hiddenReason     String?     // Reason for hiding
+  hiddenAt         DateTime?   // When it was hidden
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course           CeuCourse   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  helpfulVotes     ReviewHelpful[]
+
+  @@unique([userId, courseId]) // One review per user per course
+  @@index([courseId])
+  @@index([userId])
+  @@index([rating])
+  @@index([createdAt])
+  @@index([isHidden])
+}
+
+model ReviewHelpful {
+  id        String   @id @default(uuid())
+  reviewId  String
+  userId    String
+  createdAt DateTime @default(now())
+
+  review    CourseReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, userId]) // One vote per user per review
+  @@index([reviewId])
+  @@index([userId])
 }

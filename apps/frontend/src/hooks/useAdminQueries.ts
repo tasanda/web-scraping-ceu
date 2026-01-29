@@ -5,6 +5,7 @@ import type {
   AdminProviderCreate,
   AdminProviderUpdate,
   AdminComplianceUpdate,
+  AdminReviewUpdate,
 } from '@ceu/types';
 
 export const adminKeys = {
@@ -18,6 +19,8 @@ export const adminKeys = {
     [...adminKeys.all, 'manualCourses', { page, pageSize }] as const,
   providers: (page: number, pageSize: number) =>
     [...adminKeys.all, 'providers', { page, pageSize }] as const,
+  reviews: (page: number, pageSize: number, search?: string, showHidden?: boolean) =>
+    [...adminKeys.all, 'reviews', { page, pageSize, search, showHidden }] as const,
 };
 
 // Stats
@@ -136,6 +139,37 @@ export function useUpdateCompliance() {
       year: number;
       input: AdminComplianceUpdate;
     }) => adminApi.updateCompliance(userId, year, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.all });
+    },
+  });
+}
+
+// Reviews
+export function useAdminReviews(page = 1, pageSize = 20, search?: string, showHidden?: boolean) {
+  return useQuery({
+    queryKey: adminKeys.reviews(page, pageSize, search, showHidden),
+    queryFn: () => adminApi.getReviews(page, pageSize, search, showHidden),
+  });
+}
+
+export function useUpdateAdminReview() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: AdminReviewUpdate }) =>
+      adminApi.updateReview(id, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.all });
+    },
+  });
+}
+
+export function useDeleteAdminReview() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => adminApi.deleteReview(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: adminKeys.all });
     },

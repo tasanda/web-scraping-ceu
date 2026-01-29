@@ -171,3 +171,53 @@ export const getManualCourses = async (req: AuthRequest, res: Response): Promise
     res.status(500).json({ success: false, error: 'Failed to get manual courses' });
   }
 };
+
+// Reviews
+export const getReviews = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const pageSize = parseInt(req.query.pageSize as string) || 20;
+    const search = req.query.search as string | undefined;
+    const showHidden = req.query.showHidden === 'true' ? true : req.query.showHidden === 'false' ? false : undefined;
+
+    const result = await adminService.getReviews(page, pageSize, search, showHidden);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    console.error('Error getting reviews:', error);
+    res.status(500).json({ success: false, error: 'Failed to get reviews' });
+  }
+};
+
+export const updateReview = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const review = await adminService.updateReview(id, req.body);
+
+    if (!review) {
+      res.status(404).json({ success: false, error: 'Review not found' });
+      return;
+    }
+
+    res.json({ success: true, data: review });
+  } catch (error) {
+    console.error('Error updating review:', error);
+    res.status(500).json({ success: false, error: 'Failed to update review' });
+  }
+};
+
+export const deleteReview = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const success = await adminService.deleteReview(id);
+
+    if (!success) {
+      res.status(404).json({ success: false, error: 'Review not found' });
+      return;
+    }
+
+    res.json({ success: true, message: 'Review deleted' });
+  } catch (error) {
+    console.error('Error deleting review:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete review' });
+  }
+};

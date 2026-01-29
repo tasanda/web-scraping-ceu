@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { Course } from '@ceu/types';
+import { StarRating } from './reviews';
 
 interface CourseCardProps {
   course: Course;
@@ -27,19 +28,29 @@ export default function CourseCard({ course }: CourseCardProps) {
             {course.field.replace('_', ' ')}
           </span>
         </div>
-        
+
         {course.instructors && (
           <p className="text-sm text-gray-600 mb-2">
             {course.instructors}
           </p>
         )}
-        
+
+        {/* Rating display */}
+        {(course.avgRating !== null || (course.reviewCount ?? 0) > 0) && (
+          <div className="flex items-center gap-2 mb-2">
+            <StarRating rating={course.avgRating ?? 0} size="sm" />
+            <span className="text-xs text-gray-500">
+              ({course.reviewCount ?? 0})
+            </span>
+          </div>
+        )}
+
         {course.description && (
           <p className="text-sm text-gray-700 mb-4 line-clamp-3">
             {course.description}
           </p>
         )}
-        
+
         <div className="flex items-center justify-between text-sm">
           <div className="flex gap-4 text-gray-600">
             {course.credits && (

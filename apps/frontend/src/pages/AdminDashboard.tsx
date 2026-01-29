@@ -1,22 +1,25 @@
 import { useState } from 'react';
-import { useAdminStats } from '../hooks/useAdminQueries';
+import { useAdminStats, useAdminReviews } from '../hooks/useAdminQueries';
 import CourseManager from '../components/admin/CourseManager';
 import ProviderManager from '../components/admin/ProviderManager';
 import UserManager from '../components/admin/UserManager';
 import ManualCourseReview from '../components/admin/ManualCourseReview';
+import ReviewManager from '../components/admin/ReviewManager';
 
-type TabType = 'overview' | 'courses' | 'providers' | 'users' | 'reviews';
+type TabType = 'overview' | 'courses' | 'providers' | 'users' | 'manual-courses' | 'course-reviews';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const { data: stats, isLoading: statsLoading } = useAdminStats();
+  const { data: reviewsData } = useAdminReviews(1, 1, undefined, true); // Just to get count of hidden reviews
 
   const tabs: { id: TabType; label: string }[] = [
     { id: 'overview', label: 'Overview' },
     { id: 'courses', label: 'Courses' },
     { id: 'providers', label: 'Providers' },
     { id: 'users', label: 'Users' },
-    { id: 'reviews', label: 'Manual Reviews' },
+    { id: 'manual-courses', label: 'Manual Courses' },
+    { id: 'course-reviews', label: 'Course Reviews' },
   ];
 
   return (
@@ -42,9 +45,14 @@ export default function AdminDashboard() {
               }`}
             >
               {tab.label}
-              {tab.id === 'reviews' && stats?.pendingReviews ? (
-                <span className="ml-2 bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-xs">
+              {tab.id === 'manual-courses' && stats?.pendingReviews ? (
+                <span className="ml-2 bg-yellow-100 text-yellow-600 px-2 py-0.5 rounded-full text-xs">
                   {stats.pendingReviews}
+                </span>
+              ) : null}
+              {tab.id === 'course-reviews' && reviewsData && reviewsData.total > 0 ? (
+                <span className="ml-2 bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-xs">
+                  {reviewsData.total} hidden
                 </span>
               ) : null}
             </button>
@@ -126,7 +134,7 @@ export default function AdminDashboard() {
           {/* Quick Actions */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <button
                 onClick={() => setActiveTab('courses')}
                 className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left"
@@ -149,11 +157,18 @@ export default function AdminDashboard() {
                 <p className="text-sm text-gray-500 mt-1">User compliance status</p>
               </button>
               <button
-                onClick={() => setActiveTab('reviews')}
+                onClick={() => setActiveTab('manual-courses')}
                 className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left"
               >
-                <h3 className="font-medium text-gray-900">Review Courses</h3>
-                <p className="text-sm text-gray-500 mt-1">Manually added courses</p>
+                <h3 className="font-medium text-gray-900">Manual Courses</h3>
+                <p className="text-sm text-gray-500 mt-1">Review user-added courses</p>
+              </button>
+              <button
+                onClick={() => setActiveTab('course-reviews')}
+                className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 text-left"
+              >
+                <h3 className="font-medium text-gray-900">Moderate Reviews</h3>
+                <p className="text-sm text-gray-500 mt-1">Hide or delete offensive reviews</p>
               </button>
             </div>
           </div>
@@ -163,7 +178,8 @@ export default function AdminDashboard() {
       {activeTab === 'courses' && <CourseManager />}
       {activeTab === 'providers' && <ProviderManager />}
       {activeTab === 'users' && <UserManager />}
-      {activeTab === 'reviews' && <ManualCourseReview />}
+      {activeTab === 'manual-courses' && <ManualCourseReview />}
+      {activeTab === 'course-reviews' && <ReviewManager />}
     </div>
   );
 }

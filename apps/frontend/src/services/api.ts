@@ -32,6 +32,12 @@ import type {
   PaginatedProviders,
   CeuProvider,
   CeuCompliance,
+  CourseReview,
+  CreateReviewInput,
+  UpdateReviewInput,
+  PaginatedReviews,
+  AdminReviewUpdate,
+  AdminPaginatedReviews,
 } from '@ceu/types';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -395,5 +401,93 @@ export const adminApi = {
       return response.data.data;
     }
     throw new Error(response.data.error || 'Failed to update compliance');
+  },
+
+  // Reviews
+  getReviews: async (
+    page = 1,
+    pageSize = 20,
+    search?: string,
+    showHidden?: boolean
+  ): Promise<AdminPaginatedReviews> => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+      ...(search && { search }),
+      ...(showHidden !== undefined && { showHidden: showHidden.toString() }),
+    });
+    const response = await apiClient.get<ApiResponse<AdminPaginatedReviews>>(`/admin/reviews?${params}`);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to fetch reviews');
+  },
+
+  updateReview: async (id: string, input: AdminReviewUpdate): Promise<CourseReview> => {
+    const response = await apiClient.put<ApiResponse<CourseReview>>(`/admin/reviews/${id}`, input);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to update review');
+  },
+
+  deleteReview: async (id: string): Promise<void> => {
+    const response = await apiClient.delete<ApiResponse<void>>(`/admin/reviews/${id}`);
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to delete review');
+    }
+  },
+};
+
+export const reviewApi = {
+  getCourseReviews: async (courseId: string, page = 1, pageSize = 10): Promise<PaginatedReviews> => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+    });
+    const response = await apiClient.get<ApiResponse<PaginatedReviews>>(`/reviews/course/${courseId}?${params}`);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to fetch reviews');
+  },
+
+  getUserReview: async (courseId: string): Promise<CourseReview | null> => {
+    const response = await apiClient.get<ApiResponse<CourseReview | null>>(`/reviews/course/${courseId}/mine`);
+    if (response.data.success) {
+      return response.data.data ?? null;
+    }
+    throw new Error(response.data.error || 'Failed to fetch user review');
+  },
+
+  createReview: async (input: CreateReviewInput): Promise<CourseReview> => {
+    const response = await apiClient.post<ApiResponse<CourseReview>>('/reviews', input);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to create review');
+  },
+
+  updateReview: async (id: string, input: UpdateReviewInput): Promise<CourseReview> => {
+    const response = await apiClient.put<ApiResponse<CourseReview>>(`/reviews/${id}`, input);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to update review');
+  },
+
+  deleteReview: async (id: string): Promise<void> => {
+    const response = await apiClient.delete<ApiResponse<void>>(`/reviews/${id}`);
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to delete review');
+    }
+  },
+
+  markHelpful: async (id: string): Promise<{ helpful: boolean }> => {
+    const response = await apiClient.post<ApiResponse<{ helpful: boolean }>>(`/reviews/${id}/helpful`);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to mark review helpful');
   },
 };

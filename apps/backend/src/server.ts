@@ -7,6 +7,7 @@ import { trackingRoutes } from './routes/tracking';
 import { webhookRoutes } from './routes/webhooks';
 import { plannerRoutes } from './routes/planner';
 import { adminRoutes } from './routes/admin';
+import { reviewRoutes } from './routes/reviews';
 import { errorHandler } from './middleware/errorHandler';
 
 dotenv.config();
@@ -33,6 +34,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/tracking', trackingRoutes);
 app.use('/api/planner', plannerRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

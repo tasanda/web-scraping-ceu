@@ -5,3 +5,4 @@ export * from './compliance';
 export * from './api';
 export * from './planner';
 export * from './admin';
+export * from './review';

@@ -141,9 +141,9 @@ export class CourseService {
       url: course.url,
       description: course.description,
       instructors: course.instructors,
-      price: course.price,
-      originalPrice: course.originalPrice,
-      credits: course.credits,
+      price: course.price ? parseFloat(course.price.toString()) : null,
+      originalPrice: course.originalPrice ? parseFloat(course.originalPrice.toString()) : null,
+      credits: course.credits ? parseFloat(course.credits.toString()) : null,
       duration: course.duration,
       category: course.category,
       field: course.field,
@@ -162,6 +162,8 @@ export class CourseService {
             active: course.provider.active,
           }
         : undefined,
+      avgRating: course.avgRating ? parseFloat(course.avgRating.toString()) : null,
+      reviewCount: course.reviewCount ?? 0,
     };
   }
 }

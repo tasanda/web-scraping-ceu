@@ -1,12 +1,27 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useUser } from '@clerk/clerk-react';
 import { useCourse } from '../hooks/useCourseQueries';
 import { useCreateTracking } from '../hooks/useTrackingQueries';
+import {
+  useCourseReviews,
+  useUserReview,
+  useCreateReview,
+  useUpdateReview,
+  useDeleteReview,
+  useMarkHelpful,
+} from '../hooks/useReviewQueries';
+import { ReviewForm, ReviewList, StarRating } from '../components/reviews';
+import type { CreateReviewInput, UpdateReviewInput } from '@ceu/types';
 import toast from 'react-hot-toast';
 
 export default function CourseDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user, isSignedIn } = useUser();
+  const [reviewPage, setReviewPage] = useState(1);
+  const [isEditingReview, setIsEditingReview] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
 
   const {
     data: course,
@@ -15,6 +30,14 @@ export default function CourseDetail() {
   } = useCourse(id);
 
   const createTrackingMutation = useCreateTracking();
+
+  // Review queries
+  const { data: reviewsData, isLoading: reviewsLoading } = useCourseReviews(id, reviewPage);
+  const { data: userReview } = useUserReview(id);
+  const createReviewMutation = useCreateReview();
+  const updateReviewMutation = useUpdateReview();
+  const deleteReviewMutation = useDeleteReview();
+  const markHelpfulMutation = useMarkHelpful();
 
   useEffect(() => {
     if (error) {
@@ -32,6 +55,53 @@ export default function CourseDetail() {
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to add course');
       console.error(error);
+    }
+  };
+
+  const handleCreateReview = async (input: CreateReviewInput | UpdateReviewInput) => {
+    try {
+      await createReviewMutation.mutateAsync(input as CreateReviewInput);
+      toast.success('Review submitted successfully');
+      setShowReviewForm(false);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to submit review');
+    }
+  };
+
+  const handleUpdateReview = async (input: CreateReviewInput | UpdateReviewInput) => {
+    if (!userReview) return;
+    try {
+      await updateReviewMutation.mutateAsync({
+        id: userReview.id,
+        input: input as UpdateReviewInput,
+        courseId: id!,
+      });
+      toast.success('Review updated successfully');
+      setIsEditingReview(false);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update review');
+    }
+  };
+
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!confirm('Are you sure you want to delete your review?')) return;
+    try {
+      await deleteReviewMutation.mutateAsync({ id: reviewId, courseId: id! });
+      toast.success('Review deleted');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete review');
+    }
+  };
+
+  const handleMarkHelpful = async (reviewId: string) => {
+    if (!isSignedIn) {
+      toast.error('Please sign in to mark reviews as helpful');
+      return;
+    }
+    try {
+      await markHelpfulMutation.mutateAsync({ id: reviewId, courseId: id! });
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update helpful vote');
     }
   };
 
@@ -79,6 +149,14 @@ export default function CourseDetail() {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">{course.title}</h1>
               {course.instructors && (
                 <p className="text-lg text-gray-600">{course.instructors}</p>
+              )}
+              {(course.avgRating !== null || (course.reviewCount ?? 0) > 0) && (
+                <div className="flex items-center gap-2 mt-2">
+                  <StarRating rating={course.avgRating ?? 0} size="sm" />
+                  <span className="text-sm text-gray-600">
+                    {course.avgRating?.toFixed(1) ?? '-'} ({course.reviewCount ?? 0} review{(course.reviewCount ?? 0) !== 1 ? 's' : ''})
+                  </span>
+                </div>
               )}
             </div>
             <span className="px-3 py-1 text-sm font-medium bg-primary-100 text-primary-800 rounded">
@@ -157,6 +235,87 @@ export default function CourseDetail() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Reviews Section */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">Reviews</h2>
+          {isSignedIn && !userReview && !showReviewForm && (
+            <button
+              onClick={() => setShowReviewForm(true)}
+              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+            >
+              Write a Review
+            </button>
+          )}
+        </div>
+
+        {/* Show review form for creating new review */}
+        {showReviewForm && !userReview && (
+          <div className="mb-6">
+            <ReviewForm
+              courseId={id!}
+              onSubmit={handleCreateReview}
+              onCancel={() => setShowReviewForm(false)}
+              isSubmitting={createReviewMutation.isPending}
+            />
+          </div>
+        )}
+
+        {/* Show user's existing review with edit option */}
+        {userReview && !isEditingReview && (
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Your Review</h3>
+            <ReviewForm
+              courseId={id!}
+              existingReview={userReview}
+              onSubmit={handleUpdateReview}
+              onCancel={() => setIsEditingReview(false)}
+              isSubmitting={updateReviewMutation.isPending}
+            />
+          </div>
+        )}
+
+        {/* Edit form for existing review */}
+        {userReview && isEditingReview && (
+          <div className="mb-6">
+            <ReviewForm
+              courseId={id!}
+              existingReview={userReview}
+              onSubmit={handleUpdateReview}
+              onCancel={() => setIsEditingReview(false)}
+              isSubmitting={updateReviewMutation.isPending}
+            />
+          </div>
+        )}
+
+        {/* Reviews list */}
+        {reviewsLoading ? (
+          <div className="text-center py-8">
+            <p className="text-gray-600">Loading reviews...</p>
+          </div>
+        ) : reviewsData ? (
+          <ReviewList
+            reviews={reviewsData}
+            currentUserId={user?.id}
+            page={reviewPage}
+            onPageChange={setReviewPage}
+            onEdit={() => setIsEditingReview(true)}
+            onDelete={handleDeleteReview}
+            onMarkHelpful={handleMarkHelpful}
+            isMarkingHelpful={markHelpfulMutation.isPending ? undefined : undefined}
+          />
+        ) : null}
+
+        {/* Prompt to sign in */}
+        {!isSignedIn && (
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg text-center">
+            <p className="text-gray-600">
+              Sign in to write a review or mark reviews as helpful.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

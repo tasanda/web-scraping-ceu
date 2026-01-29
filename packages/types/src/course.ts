@@ -41,6 +41,9 @@ export interface Course {
   registrationDeadline?: Date | string | null;
   scrapedAt: Date;
   provider?: CeuProvider;
+  // Review stats
+  avgRating?: number | null;
+  reviewCount?: number;
 }
 
 export interface CeuProvider {

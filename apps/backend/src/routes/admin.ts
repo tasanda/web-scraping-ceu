@@ -12,6 +12,9 @@ import {
   deleteProvider,
   updateCompliance,
   getManualCourses,
+  getReviews,
+  updateReview,
+  deleteReview,
 } from '../controllers/adminController';
 
 const router = Router();
@@ -42,5 +45,10 @@ router.delete('/providers/:id', deleteProvider);
 
 // Compliance
 router.put('/compliance/:userId/:year', updateCompliance);
+
+// Reviews
+router.get('/reviews', getReviews);
+router.put('/reviews/:id', updateReview);
+router.delete('/reviews/:id', deleteReview);
 
 export { router as adminRoutes };

@@ -11,6 +11,9 @@ import type {
   PaginatedProviders,
   Course,
   CeuProvider,
+  CourseReview,
+  AdminReviewUpdate,
+  AdminPaginatedReviews,
 } from '@ceu/types';
 import { CourseField, ComplianceStatus as PrismaComplianceStatus } from '@prisma/client';
 
@@ -358,6 +361,165 @@ class AdminService {
   // Get manual courses for review
   async getManualCourses(page: number = 1, pageSize: number = 20) {
     return this.getCourses(page, pageSize, undefined, undefined, true);
+  }
+
+  // Review management
+  async getReviews(
+    page: number = 1,
+    pageSize: number = 20,
+    search?: string,
+    showHidden?: boolean
+  ): Promise<AdminPaginatedReviews> {
+    const skip = (page - 1) * pageSize;
+
+    const where: any = {};
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { content: { contains: search, mode: 'insensitive' } },
+        { user: { email: { contains: search, mode: 'insensitive' } } },
+        { course: { title: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    // By default show all reviews, but can filter to only hidden
+    if (showHidden !== undefined) {
+      where.isHidden = showHidden;
+    }
+
+    const [reviews, total] = await Promise.all([
+      prisma.courseReview.findMany({
+        where,
+        skip,
+        take: pageSize,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              profession: true,
+            },
+          },
+          course: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
+        },
+      }),
+      prisma.courseReview.count({ where }),
+    ]);
+
+    return {
+      reviews: reviews.map(this.mapToReview),
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    };
+  }
+
+  async updateReview(id: string, input: AdminReviewUpdate): Promise<CourseReview | null> {
+    try {
+      const review = await prisma.courseReview.update({
+        where: { id },
+        data: {
+          isHidden: input.isHidden,
+          hiddenReason: input.isHidden ? input.hiddenReason : null,
+          hiddenAt: input.isHidden ? new Date() : null,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              profession: true,
+            },
+          },
+          course: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
+        },
+      });
+
+      // Update course stats if review visibility changed
+      await this.updateCourseReviewStats(review.courseId);
+
+      return this.mapToReview(review);
+    } catch {
+      return null;
+    }
+  }
+
+  async deleteReview(id: string): Promise<boolean> {
+    try {
+      const review = await prisma.courseReview.delete({ where: { id } });
+      // Update course stats after deletion
+      await this.updateCourseReviewStats(review.courseId);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private async updateCourseReviewStats(courseId: string): Promise<void> {
+    // Only count non-hidden reviews for stats
+    const reviews = await prisma.courseReview.findMany({
+      where: { courseId, isHidden: false },
+      select: { rating: true },
+    });
+
+    const reviewCount = reviews.length;
+    const avgRating = reviewCount > 0
+      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount
+      : null;
+
+    await prisma.ceuCourse.update({
+      where: { id: courseId },
+      data: {
+        avgRating: avgRating ? Math.round(avgRating * 10) / 10 : null,
+        reviewCount,
+      },
+    });
+  }
+
+  private mapToReview(review: any): CourseReview {
+    return {
+      id: review.id,
+      userId: review.userId,
+      courseId: review.courseId,
+      rating: review.rating,
+      title: review.title,
+      content: review.content,
+      difficultyRating: review.difficultyRating,
+      wouldRecommend: review.wouldRecommend,
+      isVerified: review.isVerified,
+      helpfulCount: review.helpfulCount,
+      isHidden: review.isHidden,
+      hiddenReason: review.hiddenReason,
+      hiddenAt: review.hiddenAt,
+      createdAt: review.createdAt,
+      updatedAt: review.updatedAt,
+      user: review.user
+        ? {
+            id: review.user.id,
+            email: review.user.email,
+            profession: review.user.profession,
+          }
+        : undefined,
+      course: review.course
+        ? {
+            id: review.course.id,
+            title: review.course.title,
+          }
+        : undefined,
+    };
   }
 
   private mapToCourse(course: any): Course {
