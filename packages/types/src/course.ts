@@ -1,4 +1,4 @@
-export type CourseField = 
+export type CourseField =
   | 'mental_health'
   | 'nursing'
   | 'psychology'
@@ -8,6 +8,12 @@ export type CourseField =
 
 export type CourseStatus = 'planned' | 'in_progress' | 'completed';
 
+export type CourseType =
+  | 'live_webinar'
+  | 'in_person'
+  | 'on_demand'
+  | 'self_paced';
+
 export interface Course {
   id: string;
   providerId: string;
@@ -15,14 +21,24 @@ export interface Course {
   url: string;
   description?: string | null;
   instructors?: string | null;
-  price?: string | null;
-  originalPrice?: string | null;
-  credits?: string | null;
-  duration?: string | null;
+  // Numeric values for calculations
+  price?: number | null;
+  originalPrice?: number | null;
+  credits?: number | null;
+  duration?: number | null; // Duration in minutes
+  // String values for display
+  priceString?: string | null;
+  creditsString?: string | null;
+  durationString?: string | null;
   category?: string | null;
   field: CourseField;
   date?: string | null;
   imageUrl?: string | null;
+  // Course type and scheduling
+  courseType: CourseType;
+  startDate?: Date | string | null;
+  endDate?: Date | string | null;
+  registrationDeadline?: Date | string | null;
   scrapedAt: Date;
   provider?: CeuProvider;
 }

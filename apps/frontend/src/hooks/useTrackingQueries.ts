@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { trackingApi } from '../services/api';
 import type { CreateTrackingInput, UpdateTrackingInput } from '@ceu/types';
+import { plannerKeys } from './usePlannerQueries';
 
 export const trackingKeys = {
   all: ['tracking'] as const,
@@ -45,6 +46,8 @@ export function useUpdateTracking() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: trackingKeys.all });
       queryClient.invalidateQueries({ queryKey: trackingKeys.compliance(currentYear) });
+      // Invalidate planner queries since tracking status affects plan progress
+      queryClient.invalidateQueries({ queryKey: plannerKeys.all });
     },
   });
 }
@@ -58,6 +61,8 @@ export function useDeleteTracking() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: trackingKeys.all });
       queryClient.invalidateQueries({ queryKey: trackingKeys.compliance(currentYear) });
+      // Invalidate planner queries since deleting tracking affects plans
+      queryClient.invalidateQueries({ queryKey: plannerKeys.all });
     },
   });
 }

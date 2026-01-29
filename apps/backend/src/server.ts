@@ -5,6 +5,8 @@ import { courseRoutes } from './routes/courses';
 import { userRoutes } from './routes/users';
 import { trackingRoutes } from './routes/tracking';
 import { webhookRoutes } from './routes/webhooks';
+import { plannerRoutes } from './routes/planner';
+import { adminRoutes } from './routes/admin';
 import { errorHandler } from './middleware/errorHandler';
 
 dotenv.config();
@@ -21,7 +23,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
@@ -29,6 +31,8 @@ app.get('/health', (req, res) => {
 app.use('/api/courses', courseRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/tracking', trackingRoutes);
+app.use('/api/planner', plannerRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

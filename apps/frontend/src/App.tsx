@@ -8,6 +8,9 @@ import CourseDetail from './pages/CourseDetail';
 import Dashboard from './pages/Dashboard';
 import MyCourses from './pages/MyCourses';
 import Profile from './pages/Profile';
+import SmartPlanner from './pages/SmartPlanner';
+import StudyPlanDetail from './pages/StudyPlanDetail';
+import AdminDashboard from './pages/AdminDashboard';
 import Layout from './components/Layout';
 
 function AppContent() {
@@ -47,7 +50,10 @@ function AppContent() {
                   <Route path="/courses/:id" element={<CourseDetail />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/my-courses" element={<MyCourses />} />
+                  <Route path="/planner" element={<SmartPlanner />} />
+                  <Route path="/planner/plans/:id" element={<StudyPlanDetail />} />
                   <Route path="/profile" element={<Profile />} />
+                  <Route path="/admin" element={<AdminDashboard />} />
                 </Routes>
               </Layout>
               <Toaster position="top-right" />

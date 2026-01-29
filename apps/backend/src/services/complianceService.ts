@@ -62,7 +62,7 @@ export class ComplianceService {
       }
       // Fallback to course credits if tracking doesn't have credits
       if (tracking.course?.credits) {
-        const credits = parseFloat(tracking.course.credits);
+        const credits = parseFloat(tracking.course.credits.toString());
         return sum + (isNaN(credits) ? 0 : credits);
       }
       return sum;

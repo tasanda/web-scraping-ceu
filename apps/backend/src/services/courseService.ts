@@ -104,18 +104,26 @@ export class CourseService {
     // Generate a unique URL for manual courses
     const uniqueUrl = input.url || `manual://course-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+    // Parse string inputs to appropriate types
+    const credits = input.credits ? parseFloat(input.credits) : null;
+    const duration = input.duration ? parseInt(input.duration, 10) : null;
+    const price = input.price ? parseFloat(input.price) : null;
+
     const course = await prisma.ceuCourse.create({
       data: {
         providerId: manualProvider.id,
         title: input.title,
         url: uniqueUrl,
         field: input.field as CourseField,
-        credits: input.credits,
+        credits: credits && !isNaN(credits) ? credits : null,
+        creditsString: input.credits,
         description: input.description,
         instructors: input.instructors,
-        duration: input.duration,
+        duration: duration && !isNaN(duration) ? duration : null,
+        durationString: input.duration,
         category: input.category,
-        price: input.price,
+        price: price && !isNaN(price) ? price : null,
+        priceString: input.price,
       },
       include: {
         provider: true,
@@ -141,6 +149,10 @@ export class CourseService {
       field: course.field,
       date: course.date,
       imageUrl: course.imageUrl,
+      courseType: course.courseType,
+      startDate: course.startDate,
+      endDate: course.endDate,
+      registrationDeadline: course.registrationDeadline,
       scrapedAt: course.scrapedAt,
       provider: course.provider
         ? {

@@ -11,6 +11,29 @@ import type {
   CreateTrackingInput,
   UpdateTrackingInput,
   ComplianceSummary,
+  UserPlanningPreferences,
+  UpdatePreferencesInput,
+  StudyPlan,
+  StudyPlanItem,
+  CreateStudyPlanInput,
+  UpdateStudyPlanInput,
+  AddPlanItemInput,
+  UpdatePlanItemInput,
+  CourseRecommendation,
+  GeneratedPlan,
+  GeneratePlanRequest,
+  PlannerAnalytics,
+  AdminStats,
+  AdminUserView,
+  AdminCourseUpdate,
+  AdminProviderCreate,
+  AdminProviderUpdate,
+  AdminProvider,
+  AdminComplianceUpdate,
+  PaginatedUsers,
+  PaginatedProviders,
+  CeuProvider,
+  CeuCompliance,
 } from '@ceu/types';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -146,5 +169,233 @@ export const trackingApi = {
       return response.data.data;
     }
     throw new Error(response.data.error || 'Failed to fetch compliance');
+  },
+};
+
+export const plannerApi = {
+  // Preferences
+  getPreferences: async (): Promise<UserPlanningPreferences | null> => {
+    const response = await apiClient.get<ApiResponse<UserPlanningPreferences | null>>('/planner/preferences');
+    if (response.data.success) {
+      return response.data.data ?? null;
+    }
+    throw new Error(response.data.error || 'Failed to fetch preferences');
+  },
+
+  updatePreferences: async (input: UpdatePreferencesInput): Promise<UserPlanningPreferences> => {
+    const response = await apiClient.put<ApiResponse<UserPlanningPreferences>>('/planner/preferences', input);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to update preferences');
+  },
+
+  // Study Plans
+  getStudyPlans: async (): Promise<StudyPlan[]> => {
+    const response = await apiClient.get<ApiResponse<StudyPlan[]>>('/planner/plans');
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to fetch study plans');
+  },
+
+  getStudyPlan: async (id: string): Promise<StudyPlan> => {
+    const response = await apiClient.get<ApiResponse<StudyPlan>>(`/planner/plans/${id}`);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to fetch study plan');
+  },
+
+  createStudyPlan: async (input: CreateStudyPlanInput): Promise<StudyPlan> => {
+    const response = await apiClient.post<ApiResponse<StudyPlan>>('/planner/plans', input);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to create study plan');
+  },
+
+  updateStudyPlan: async (id: string, input: UpdateStudyPlanInput): Promise<StudyPlan> => {
+    const response = await apiClient.put<ApiResponse<StudyPlan>>(`/planner/plans/${id}`, input);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to update study plan');
+  },
+
+  deleteStudyPlan: async (id: string): Promise<void> => {
+    const response = await apiClient.delete<ApiResponse<void>>(`/planner/plans/${id}`);
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to delete study plan');
+    }
+  },
+
+  // Plan Items
+  addPlanItem: async (planId: string, input: AddPlanItemInput): Promise<StudyPlanItem> => {
+    const response = await apiClient.post<ApiResponse<StudyPlanItem>>(`/planner/plans/${planId}/items`, input);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to add plan item');
+  },
+
+  updatePlanItem: async (planId: string, itemId: string, input: UpdatePlanItemInput): Promise<StudyPlanItem> => {
+    const response = await apiClient.put<ApiResponse<StudyPlanItem>>(`/planner/plans/${planId}/items/${itemId}`, input);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to update plan item');
+  },
+
+  removePlanItem: async (planId: string, itemId: string): Promise<void> => {
+    const response = await apiClient.delete<ApiResponse<void>>(`/planner/plans/${planId}/items/${itemId}`);
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to remove plan item');
+    }
+  },
+
+  // Recommendations & Generation
+  getRecommendations: async (limit: number = 10): Promise<CourseRecommendation[]> => {
+    const response = await apiClient.get<ApiResponse<CourseRecommendation[]>>(`/planner/recommendations?limit=${limit}`);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to fetch recommendations');
+  },
+
+  generatePlan: async (request: GeneratePlanRequest): Promise<GeneratedPlan> => {
+    const response = await apiClient.post<ApiResponse<GeneratedPlan>>('/planner/generate', request);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to generate plan');
+  },
+
+  // Analytics
+  getAnalytics: async (): Promise<PlannerAnalytics> => {
+    const response = await apiClient.get<ApiResponse<PlannerAnalytics>>('/planner/analytics');
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to fetch analytics');
+  },
+};
+
+export const adminApi = {
+  // Dashboard
+  getStats: async (): Promise<AdminStats> => {
+    const response = await apiClient.get<ApiResponse<AdminStats>>('/admin/stats');
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to fetch admin stats');
+  },
+
+  // Users
+  getUsers: async (page = 1, pageSize = 20, search?: string): Promise<PaginatedUsers> => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+      ...(search && { search }),
+    });
+    const response = await apiClient.get<ApiResponse<PaginatedUsers>>(`/admin/users?${params}`);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to fetch users');
+  },
+
+  // Courses
+  getCourses: async (
+    page = 1,
+    pageSize = 20,
+    search?: string,
+    providerId?: string,
+    manualOnly?: boolean
+  ): Promise<PaginatedCourses> => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+      ...(search && { search }),
+      ...(providerId && { providerId }),
+      ...(manualOnly && { manualOnly: 'true' }),
+    });
+    const response = await apiClient.get<ApiResponse<PaginatedCourses>>(`/admin/courses?${params}`);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to fetch courses');
+  },
+
+  updateCourse: async (id: string, input: AdminCourseUpdate): Promise<Course> => {
+    const response = await apiClient.put<ApiResponse<Course>>(`/admin/courses/${id}`, input);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to update course');
+  },
+
+  deleteCourse: async (id: string): Promise<void> => {
+    const response = await apiClient.delete<ApiResponse<void>>(`/admin/courses/${id}`);
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to delete course');
+    }
+  },
+
+  getManualCourses: async (page = 1, pageSize = 20): Promise<PaginatedCourses> => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+    });
+    const response = await apiClient.get<ApiResponse<PaginatedCourses>>(`/admin/courses/manual?${params}`);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to fetch manual courses');
+  },
+
+  // Providers
+  getProviders: async (page = 1, pageSize = 20): Promise<PaginatedProviders> => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+    });
+    const response = await apiClient.get<ApiResponse<PaginatedProviders>>(`/admin/providers?${params}`);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to fetch providers');
+  },
+
+  createProvider: async (input: AdminProviderCreate): Promise<CeuProvider> => {
+    const response = await apiClient.post<ApiResponse<CeuProvider>>('/admin/providers', input);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to create provider');
+  },
+
+  updateProvider: async (id: string, input: AdminProviderUpdate): Promise<CeuProvider> => {
+    const response = await apiClient.put<ApiResponse<CeuProvider>>(`/admin/providers/${id}`, input);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to update provider');
+  },
+
+  deleteProvider: async (id: string): Promise<void> => {
+    const response = await apiClient.delete<ApiResponse<void>>(`/admin/providers/${id}`);
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Failed to delete provider');
+    }
+  },
+
+  // Compliance
+  updateCompliance: async (userId: string, year: number, input: AdminComplianceUpdate): Promise<CeuCompliance> => {
+    const response = await apiClient.put<ApiResponse<CeuCompliance>>(`/admin/compliance/${userId}/${year}`, input);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.error || 'Failed to update compliance');
   },
 };

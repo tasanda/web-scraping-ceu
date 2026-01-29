@@ -31,6 +31,21 @@ enum ComplianceStatus {
   in_progress
 }
 
+enum CourseType {
+  live_webinar
+  in_person
+  on_demand
+  self_paced
+}
+
+enum PlanStatus {
+  draft
+  active
+  completed
+  archived
+}
+
+
 model User {
   id                    String   @id @default(uuid())
   email                 String   @unique
@@ -42,6 +57,9 @@ model User {
 
   tracking              UserCeuTracking[]
   compliance            CeuCompliance[]
+  planningPreferences   UserPlanningPreferences?
+  studyPlans            StudyPlan[]
+  completionHistory     CourseCompletionHistory[]
 
   @@index([clerkId])
   @@index([email])
@@ -59,21 +77,28 @@ model CeuProvider {
 }
 
 model CeuCourse {
-  id          String      @id @default(uuid())
-  providerId  String
-  title       String
-  url         String      @unique
-  description String?
-  instructors String?
-  price       String?
-  originalPrice String?
-  credits     String?
-  duration    String?
-  category    String?
-  field       CourseField
-  date        String?
-  imageUrl    String?
-  scrapedAt   DateTime    @default(now())
+  id                   String      @id @default(uuid())
+  providerId           String
+  title                String
+  url                  String      @unique
+  description          String?
+  instructors          String?
+  price                Decimal?    @db.Decimal(10, 2)
+  originalPrice        Decimal?    @db.Decimal(10, 2)
+  priceString          String?     // Keep original string for display
+  credits              Decimal?    @db.Decimal(5, 2)
+  creditsString        String?     // Keep original string for display
+  duration             Int?        // Duration in minutes
+  durationString       String?     // Keep original string for display
+  category             String?
+  field                CourseField
+  date                 String?
+  imageUrl             String?
+  courseType           CourseType  @default(on_demand)
+  startDate            DateTime?
+  endDate              DateTime?
+  registrationDeadline DateTime?
+  scrapedAt            DateTime    @default(now())
 
   provider    CeuProvider        @relation(fields: [providerId], references: [id])
   tracking    UserCeuTracking[]
@@ -83,8 +108,8 @@ model CeuCourse {
   @@index([category])
   @@index([scrapedAt])
   @@index([url])
-  // REMOVE THIS LINE:
-  // @@fulltext([title, description])
+  @@index([courseType])
+  @@index([startDate])
 }
 
 model UserCeuTracking {
@@ -99,8 +124,9 @@ model UserCeuTracking {
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course        CeuCourse    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course        CeuCourse       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  studyPlanItems StudyPlanItem[]
 
   @@unique([userId, courseId])
   @@index([userId])
@@ -122,4 +148,83 @@ model CeuCompliance {
   @@unique([userId, year])
   @@index([userId])
   @@index([year])
+}
+
+model UserPlanningPreferences {
+  id                   String        @id @default(uuid())
+  userId               String        @unique
+  budgetMin            Decimal?      @db.Decimal(10, 2)
+  budgetMax            Decimal?      @db.Decimal(10, 2)
+  preferredFields      CourseField[] @default([])
+  preferredCourseTypes CourseType[]  @default([])
+  availableDaysPerWeek Int?
+  hoursPerSession      Decimal?      @db.Decimal(4, 2)
+  preferredTimeSlots   String[]      @default([])
+  complianceDeadline   DateTime?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  user                 User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model StudyPlan {
+  id             String      @id @default(uuid())
+  userId         String
+  name           String
+  targetCredits  Decimal     @db.Decimal(5, 2)
+  targetDeadline DateTime
+  status         PlanStatus  @default(draft)
+  estimatedCost  Decimal?    @db.Decimal(10, 2)
+  estimatedHours Decimal?    @db.Decimal(6, 2)
+  notes          String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items          StudyPlanItem[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([targetDeadline])
+}
+
+model StudyPlanItem {
+  id            String          @id @default(uuid())
+  planId        String
+  trackingId    String
+  scheduledDate DateTime?
+  scheduledTime String?         // e.g., "09:00" or "14:30"
+  priority      Int             @default(0)
+  notes         String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  plan          StudyPlan       @relation(fields: [planId], references: [id], onDelete: Cascade)
+  tracking      UserCeuTracking @relation(fields: [trackingId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, trackingId])
+  @@index([planId])
+  @@index([trackingId])
+  @@index([scheduledDate])
+}
+
+model CourseCompletionHistory {
+  id                String      @id @default(uuid())
+  userId            String
+  courseId          String
+  completedAt       DateTime
+  actualDuration    Int?        // Actual time spent in minutes
+  rating            Int?        // 1-5 rating
+  difficultyRating  Int?        // 1-5 difficulty
+  wouldRecommend    Boolean?
+  notes             String?
+  createdAt         DateTime    @default(now())
+
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([courseId])
+  @@index([completedAt])
 }

@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { UserButton } from '@clerk/clerk-react';
+import { UserButton, useUser } from '@clerk/clerk-react';
 
 interface LayoutProps {
   children: ReactNode;
@@ -8,12 +8,18 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
+  const { user } = useUser();
+
+  // Check if user is admin via Clerk publicMetadata
+  const isAdmin = user?.publicMetadata?.role === 'admin';
 
   const navItems = [
     { path: '/discover', label: 'Discover Courses' },
     { path: '/my-courses', label: 'My Courses' },
+    { path: '/planner', label: 'Smart Planner' },
     { path: '/dashboard', label: 'Dashboard' },
     { path: '/profile', label: 'Profile' },
+    ...(isAdmin ? [{ path: '/admin', label: 'Admin' }] : []),
   ];
 
   return (

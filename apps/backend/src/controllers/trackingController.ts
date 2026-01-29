@@ -262,6 +262,10 @@ function mapToTracking(tracking: any): UserCeuTracking {
           field: tracking.course.field,
           date: tracking.course.date,
           imageUrl: tracking.course.imageUrl,
+          courseType: tracking.course.courseType,
+          startDate: tracking.course.startDate,
+          endDate: tracking.course.endDate,
+          registrationDeadline: tracking.course.registrationDeadline,
           scrapedAt: tracking.course.scrapedAt,
         }
       : undefined,

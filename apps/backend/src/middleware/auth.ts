@@ -12,6 +12,7 @@ export interface AuthRequest extends Request {
     licenseNumber?: string | null;
     annualCeuRequirement?: number | null;
   };
+  isAdmin?: boolean;
 }
 
 export const authenticate = async (
@@ -90,3 +91,35 @@ export const authenticate = async (
 
 // Export as both names for compatibility
 export const requireAuth = authenticate;
+
+// Admin middleware - must be used after authenticate
+export const requireAdmin = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user?.clerkId) {
+      res.status(401).json({ success: false, error: 'Unauthorized' });
+      return;
+    }
+
+    // Get full Clerk user to check publicMetadata
+    const clerkUser = await clerkClient.users.getUser(req.user.clerkId);
+    const role = clerkUser.publicMetadata?.role as string | undefined;
+
+    if (role !== 'admin') {
+      console.log('❌ User is not admin:', req.user.email);
+      res.status(403).json({ success: false, error: 'Admin access required' });
+      return;
+    }
+
+    req.isAdmin = true;
+    console.log('✅ Admin access granted:', req.user.email);
+    next();
+  } catch (error: unknown) {
+    console.error('❌ Admin check error:', error);
+    res.status(500).json({ success: false, error: 'Failed to verify admin status' });
+    return;
+  }
+};

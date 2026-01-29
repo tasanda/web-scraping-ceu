@@ -108,10 +108,20 @@ class DatabasePipeline:
         
         return result['id'] if result else None
     
+    def _parse_datetime(self, date_str):
+        """Parse ISO datetime string to datetime object"""
+        from datetime import datetime
+        if not date_str:
+            return None
+        try:
+            return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+        except (ValueError, AttributeError):
+            return None
+
     def _insert_course(self, adapter, provider_id, spider):
         """Insert new course into database"""
         from datetime import datetime
-        
+
         # Map field values
         field_mapping = {
             'mental_health': 'mental_health',
@@ -122,16 +132,40 @@ class DatabasePipeline:
             'other': 'other'
         }
         field = field_mapping.get(adapter.get('field', 'other'), 'other')
-        
+
+        # Map course type values
+        course_type_mapping = {
+            'live_webinar': 'live_webinar',
+            'in_person': 'in_person',
+            'on_demand': 'on_demand',
+            'self_paced': 'self_paced'
+        }
+        course_type = course_type_mapping.get(adapter.get('course_type', 'on_demand'), 'on_demand')
+
+        # Parse dates
+        start_date = self._parse_datetime(adapter.get('start_date'))
+        end_date = self._parse_datetime(adapter.get('end_date'))
+        registration_deadline = self._parse_datetime(adapter.get('registration_deadline'))
+
         self.cursor.execute(
             """
             INSERT INTO "CeuCourse" (
-                id, "providerId", title, url, description, instructors, price,
-                "originalPrice", credits, duration, category, field, date,
-                "imageUrl", "scrapedAt"
+                id, "providerId", title, url, description, instructors,
+                price, "originalPrice", "priceString",
+                credits, "creditsString",
+                duration, "durationString",
+                category, field, date, "imageUrl",
+                "courseType", "startDate", "endDate", "registrationDeadline",
+                "scrapedAt"
             )
             VALUES (
-                gen_random_uuid(), %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                gen_random_uuid(), %s, %s, %s, %s, %s,
+                %s, %s, %s,
+                %s, %s,
+                %s, %s,
+                %s, %s, %s, %s,
+                %s, %s, %s, %s,
+                %s
             )
             RETURNING id
             """,
@@ -141,14 +175,24 @@ class DatabasePipeline:
                 adapter.get('url'),
                 adapter.get('description'),
                 adapter.get('instructors'),
+                # Numeric values
                 adapter.get('price'),
                 adapter.get('original_price'),
+                adapter.get('price_string'),
                 adapter.get('credits'),
+                adapter.get('credits_string'),
                 adapter.get('duration'),
+                adapter.get('duration_string'),
+                # Other fields
                 adapter.get('category') or adapter.get('product_type'),
                 field,
                 adapter.get('date'),
                 adapter.get('image_url'),
+                # New fields
+                course_type,
+                start_date,
+                end_date,
+                registration_deadline,
                 datetime.now()
             )
         )
@@ -159,7 +203,7 @@ class DatabasePipeline:
     def _update_course(self, course_id, adapter, provider_id, spider):
         """Update existing course"""
         from datetime import datetime
-        
+
         field_mapping = {
             'mental_health': 'mental_health',
             'psychology': 'psychology',
@@ -169,13 +213,31 @@ class DatabasePipeline:
             'other': 'other'
         }
         field = field_mapping.get(adapter.get('field', 'other'), 'other')
-        
+
+        # Map course type values
+        course_type_mapping = {
+            'live_webinar': 'live_webinar',
+            'in_person': 'in_person',
+            'on_demand': 'on_demand',
+            'self_paced': 'self_paced'
+        }
+        course_type = course_type_mapping.get(adapter.get('course_type', 'on_demand'), 'on_demand')
+
+        # Parse dates
+        start_date = self._parse_datetime(adapter.get('start_date'))
+        end_date = self._parse_datetime(adapter.get('end_date'))
+        registration_deadline = self._parse_datetime(adapter.get('registration_deadline'))
+
         self.cursor.execute(
             """
             UPDATE "CeuCourse"
-            SET title = %s, description = %s, instructors = %s, price = %s,
-                "originalPrice" = %s, credits = %s, duration = %s, category = %s,
-                field = %s, date = %s, "imageUrl" = %s, "scrapedAt" = %s
+            SET title = %s, description = %s, instructors = %s,
+                price = %s, "originalPrice" = %s, "priceString" = %s,
+                credits = %s, "creditsString" = %s,
+                duration = %s, "durationString" = %s,
+                category = %s, field = %s, date = %s, "imageUrl" = %s,
+                "courseType" = %s, "startDate" = %s, "endDate" = %s, "registrationDeadline" = %s,
+                "scrapedAt" = %s
             WHERE id = %s
             """,
             (
@@ -184,12 +246,19 @@ class DatabasePipeline:
                 adapter.get('instructors'),
                 adapter.get('price'),
                 adapter.get('original_price'),
+                adapter.get('price_string'),
                 adapter.get('credits'),
+                adapter.get('credits_string'),
                 adapter.get('duration'),
+                adapter.get('duration_string'),
                 adapter.get('category') or adapter.get('product_type'),
                 field,
                 adapter.get('date'),
                 adapter.get('image_url'),
+                course_type,
+                start_date,
+                end_date,
+                registration_deadline,
                 datetime.now(),
                 course_id
             )
