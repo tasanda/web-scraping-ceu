@@ -73,7 +73,8 @@ model CeuProvider {
   baseUrl  String
   active   Boolean @default(true)
 
-  courses  CeuCourse[]
+  courses      CeuCourse[]
+  rawCrawlData RawCrawlData[]
 
   @@index([name])
 }
@@ -105,9 +106,10 @@ model CeuCourse {
   avgRating            Decimal?    @db.Decimal(2, 1)
   reviewCount          Int         @default(0)
 
-  provider    CeuProvider        @relation(fields: [providerId], references: [id])
-  tracking    UserCeuTracking[]
-  reviews     CourseReview[]
+  provider     CeuProvider        @relation(fields: [providerId], references: [id])
+  tracking     UserCeuTracking[]
+  reviews      CourseReview[]
+  rawCrawlData RawCrawlData[]
 
   @@index([providerId])
   @@index([field])
@@ -277,4 +279,50 @@ model ReviewHelpful {
   @@unique([reviewId, userId]) // One vote per user per review
   @@index([reviewId])
   @@index([userId])
+}
+
+// ============================================
+// Crawler Raw Data Storage (Two-Phase Architecture)
+// ============================================
+
+enum CrawlStatus {
+  pending     // HTML stored, not yet processed
+  processing  // Currently being processed
+  completed   // Successfully extracted
+  failed      // Extraction failed
+  skipped     // Skipped (e.g., not a course page)
+}
+
+model RawCrawlData {
+  id              String      @id @default(uuid())
+  url             String      @unique
+  providerId      String?
+  htmlContent     String      // Raw HTML content
+  httpStatus      Int         // HTTP status code
+  contentType     String?     // Content-Type header
+  crawledAt       DateTime    @default(now())
+
+  // Processing status
+  status          CrawlStatus @default(pending)
+  processedAt     DateTime?
+  processingError String?
+
+  // Metadata from crawl
+  sourceUrl       String?     // Page that linked to this
+  pageType        String?     // "course_detail", "listing", "unknown"
+
+  // Extraction results (JSON for flexibility)
+  extractedData   Json?       // Raw extraction results before validation
+  extractionMeta  Json?       // Confidence scores, methods used, etc.
+
+  // Link to final course if created
+  courseId        String?
+
+  provider        CeuProvider? @relation(fields: [providerId], references: [id])
+  course          CeuCourse?   @relation(fields: [courseId], references: [id])
+
+  @@index([status])
+  @@index([providerId])
+  @@index([crawledAt])
+  @@index([processedAt])
 }

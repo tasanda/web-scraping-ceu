@@ -23,8 +23,14 @@ ngrok http 3001
 
 **Optional - Run Crawler (Terminal 4):**
 ```bash
-source venv/bin/activate
-cd crawler/tutorial && scrapy crawl pesi
+source .venv/bin/activate
+cd crawler/tutorial
+
+# Two-phase crawler (recommended)
+python run_crawler.py --provider pesi --max-pages 50
+
+# Or legacy direct spider
+scrapy crawl pesi
 ```
 
 ---
@@ -45,11 +51,16 @@ cd crawler/tutorial && scrapy crawl pesi
 CEU/
 ├── apps/
 │   ├── backend/          # Express + TypeScript API
+│   │   └── prisma/       # Database schema & migrations
 │   └── frontend/         # React + TypeScript UI
 ├── packages/
 │   ├── types/            # Shared TypeScript types
 │   └── config/           # Shared configurations
 ├── crawler/              # Scrapy Python crawler
+│   └── tutorial/
+│       ├── spiders/      # Web crawling spiders
+│       ├── pipelines/    # Data storage pipelines
+│       └── processing/   # NLP extraction module
 └── docker-compose.yml    # Local development setup
 ```
 
@@ -208,23 +219,231 @@ To remove admin access, either:
 
 ## Crawler Setup
 
-The Scrapy crawler is located in `crawler/tutorial/`:
+The crawler uses a **two-phase architecture** for robust data extraction:
+
+1. **Phase 1 (HTML Collection)**: Crawl websites and store raw HTML
+2. **Phase 2 (NLP Processing)**: Extract structured data using NLP and pattern matching
+
+### Installation
 
 ```bash
-# Create and activate virtual environment
-python -m venv venv
-source venv/bin/activate
+# Activate the project virtual environment
+source .venv/bin/activate
 
 # Install Python dependencies
 cd crawler
 pip install -r requirements.txt
 
-# Run the crawler
-cd tutorial
+# Download spaCy language model (required for NLP)
+python -m spacy download en_core_web_sm
+```
+
+### Quick Start
+
+```bash
+cd crawler/tutorial
+
+# Option 1: Run both phases (crawl + process)
+python run_crawler.py --provider pesi --max-pages 50
+
+# Option 2: Run the original direct spider (legacy)
 scrapy crawl pesi
 ```
 
-> Configure database connection in `crawler/tutorial/settings.py` - update `DATABASE_CONFIG` with your PostgreSQL credentials.
+### Two-Phase Architecture
+
+#### Phase 1: HTML Collection
+
+Collects raw HTML and stores it in the `RawCrawlData` table for later processing.
+
+```bash
+# Crawl and store HTML only
+python run_crawler.py --provider pesi --max-pages 100 --phase 1
+
+# Or use scrapy directly
+scrapy crawl html_collector -a provider=pesi -a max_pages=100
+```
+
+#### Phase 2: NLP Processing
+
+Processes stored HTML using:
+- **Text Extraction**: Title, description, headings from HTML
+- **spaCy NER**: Dates, money, persons, organizations
+- **CEU Pattern Matching**: Credits, prices, course types, professional fields
+
+```bash
+# Process all pending records
+python run_crawler.py --phase 2 --limit 100
+
+# Or use the CLI directly
+python -m tutorial.processing process --limit 100 --provider pesi
+```
+
+### CLI Commands
+
+```bash
+# Show processing statistics
+python -m tutorial.processing stats
+
+# Reprocess a specific record
+python -m tutorial.processing reprocess --id <record-id>
+
+# Test extraction on a URL (for debugging)
+python -m tutorial.processing test --url "https://www.pesi.com/sales/..."
+```
+
+### Extraction Pipeline
+
+The NLP processing pipeline extracts:
+
+| Field | Method | Confidence |
+|-------|--------|------------|
+| Title | HTML h1/title tags | High |
+| Credits | Regex patterns (e.g., "6.5 CE Hours") | 0.6-0.95 |
+| Price | Regex patterns (e.g., "$199.99") | 0.8-0.9 |
+| Course Type | Keyword matching (live, on-demand, self-paced) | 0.8-0.95 |
+| Professional Field | Keyword scoring (mental_health, nursing, etc.) | 0.5-0.95 |
+| Dates | spaCy NER + regex | 0.7-0.8 |
+| Instructors | spaCy PERSON entities + patterns | 0.7-0.8 |
+
+### Project Structure
+
+```
+crawler/
+├── requirements.txt              # Python dependencies
+├── run_crawler.py                # Convenience script for both phases
+└── tutorial/
+    ├── settings.py               # Scrapy settings & database config
+    ├── spiders/
+    │   ├── pesi_spider.py        # Original direct spider (legacy)
+    │   └── html_collector.py     # Phase 1: HTML collection spider
+    ├── pipelines/
+    │   ├── database_pipeline.py  # Direct database insertion
+    │   └── html_storage_pipeline.py  # Phase 1: HTML storage
+    └── processing/               # Phase 2: NLP extraction
+        ├── __init__.py
+        ├── cli.py                # Command-line interface
+        ├── processor.py          # Main orchestration
+        ├── text_extractor.py     # HTML text extraction
+        ├── nlp_processor.py      # spaCy NER
+        └── ceu_patterns.py       # CEU-specific regex patterns
+```
+
+### Configuration
+
+Update database connection in `crawler/tutorial/tutorial/settings.py`:
+
+```python
+DATABASE_CONFIG = {
+    'host': 'localhost',
+    'port': 5432,
+    'database': 'ceu_db',
+    'user': 'postgres',
+    'password': 'postgres'
+}
+```
+
+### Adding New Providers
+
+1. Add provider config to `html_collector.py`:
+```python
+PROVIDERS = {
+    'new_provider': {
+        'start_urls': ['https://www.newprovider.com/'],
+        'base_url': 'www.newprovider.com',
+        'course_link_selector': 'a.course-link::attr(href)',
+        'listing_patterns': ['/courses', '/catalog'],
+        'course_patterns': ['/course/', '/product/'],
+    },
+}
+```
+
+2. Run the crawler:
+```bash
+python run_crawler.py --provider new_provider --max-pages 50
+```
+
+### Troubleshooting & Logs
+
+#### Phase 1 (Scrapy) Debugging
+
+```bash
+cd crawler/tutorial
+source ../../.venv/bin/activate
+
+# Run with verbose logging (INFO level)
+scrapy crawl html_collector -a provider=pesi -a max_pages=5 -L INFO
+
+# Run with debug logging (very verbose)
+scrapy crawl html_collector -a provider=pesi -a max_pages=5 -L DEBUG
+
+# Save logs to file
+scrapy crawl html_collector -a provider=pesi -a max_pages=5 \
+  --logfile=crawl.log -L DEBUG
+```
+
+#### Phase 2 (NLP Processing) Debugging
+
+```bash
+cd crawler/tutorial
+source ../../.venv/bin/activate
+
+# Run with verbose output
+python -m tutorial.processing process --limit 10 -v
+
+# Run with debug output (includes line numbers)
+python -m tutorial.processing process --limit 10 --debug
+
+# Test extraction on a single URL (great for debugging)
+python -m tutorial.processing test --url "https://www.pesi.com/sales/..."
+
+# View failed records with error messages
+python -m tutorial.processing failed --limit 10
+
+# Reprocess a specific failed record
+python -m tutorial.processing reprocess --id <record-id>
+```
+
+#### Useful Database Queries
+
+```bash
+# Check processing statistics
+python -m tutorial.processing stats
+
+# View recent records with status
+python -c "
+import psycopg2
+from psycopg2.extras import RealDictCursor
+conn = psycopg2.connect(host='localhost', port=5432, database='ceu_db',
+                        user='postgres', password='postgres')
+cur = conn.cursor(cursor_factory=RealDictCursor)
+cur.execute('''SELECT url, status, \"pageType\" FROM \"RawCrawlData\"
+               ORDER BY \"crawledAt\" DESC LIMIT 10''')
+for row in cur.fetchall():
+    print(f\"{row['status']:12} {row['pageType']:15} {row['url'][:50]}...\")
+"
+
+# Clear all raw crawl data (start fresh)
+python -c "
+import psycopg2
+conn = psycopg2.connect(host='localhost', port=5432, database='ceu_db',
+                        user='postgres', password='postgres')
+cur = conn.cursor()
+cur.execute('DELETE FROM \"RawCrawlData\"')
+conn.commit()
+print('Cleared all RawCrawlData records')
+"
+```
+
+#### Common Issues
+
+| Issue | Solution |
+|-------|----------|
+| `ModuleNotFoundError: No module named 'bs4'` | Run: `pip install beautifulsoup4` |
+| `ModuleNotFoundError: No module named 'spacy'` | Run: `pip install spacy && python -m spacy download en_core_web_sm` |
+| Pages detected as "unknown" type | Update `course_patterns` in `html_collector.py` |
+| All records "skipped" | Check that `pageType` is "course_detail" in RawCrawlData |
+| Database connection failed | Ensure PostgreSQL is running: `docker-compose up -d postgres` |
 
 ---
 

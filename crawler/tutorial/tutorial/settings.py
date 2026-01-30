@@ -88,9 +88,19 @@ ADDONS = {}
 
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
+#
+# Default pipeline: Direct extraction and storage (original behavior)
+# For two-phase mode (html_collector spider), use HTML_STORAGE_PIPELINES below
 ITEM_PIPELINES = {
     "tutorial.pipelines.deduplication_pipeline.DeduplicationPipeline": 200,
     "tutorial.pipelines.database_pipeline.DatabasePipeline": 300,
+}
+
+# Two-phase pipeline: HTML storage only (Phase 1)
+# Use with: scrapy crawl html_collector -s ITEM_PIPELINES="$(python -c 'import tutorial.settings; print(tutorial.settings.HTML_STORAGE_PIPELINES)')"
+# Or configure in spider's custom_settings
+HTML_STORAGE_PIPELINES = {
+    "tutorial.pipelines.html_storage_pipeline.HtmlStoragePipeline": 300,
 }
 
 # Database configuration for database pipeline
