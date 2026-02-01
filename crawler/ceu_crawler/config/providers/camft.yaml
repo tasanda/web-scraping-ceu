@@ -1,0 +1,43 @@
+name: camft
+display_name: "CAMFT - California Association of Marriage and Family Therapists"
+active: true
+
+domains:
+  - base_url: "https://ondemand.camft.org"
+    primary: true
+
+crawl:
+  start_urls:
+    - "https://ondemand.camft.org/courses"
+  download_delay: 5
+  randomize_download_delay: true
+  concurrent_requests: 1
+  concurrent_requests_per_domain: 1
+  depth_limit: 2
+  robotstxt_obey: true
+  autothrottle:
+    enabled: true
+    start_delay: 2
+    max_delay: 10
+    target_concurrency: 0.5
+
+  patterns:
+    listing:
+      - "/courses$"
+    course_detail:
+      - "/courses/\\d+"
+      - "/courses/[0-9]+"
+    skip:
+      - "/cart"
+      - "/checkout"
+      - "/login"
+      - "/register"
+      - "/account"
+      - "/signup"
+
+selectors:
+  course_links:
+    css: ".course a::attr(href)"
+    fallback_css: "article.course a::attr(href), .item a::attr(href)"
+  pagination:
+    css: ".pagination a::attr(href)"
