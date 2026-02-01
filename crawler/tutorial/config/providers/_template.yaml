@@ -1,0 +1,84 @@
+# Provider Configuration Template
+# Copy this file and customize for your new provider
+# File naming convention: {provider_name}.yaml (lowercase, no spaces)
+
+name: example_provider  # Unique identifier (lowercase, underscores OK)
+display_name: "Example Provider Inc."
+active: false  # Set to true when ready for production
+
+domains:
+  - base_url: "https://www.example.com"
+    primary: true
+  # Add additional domains if provider uses multiple
+  # - base_url: "https://courses.example.com"
+  #   primary: false
+
+crawl:
+  # Starting URLs for the crawl
+  start_urls:
+    - "https://www.example.com/courses"
+
+  # Crawl politeness settings
+  download_delay: 5           # Seconds between requests
+  randomize_download_delay: true
+  concurrent_requests: 1      # Total concurrent requests
+  concurrent_requests_per_domain: 1
+  depth_limit: 3              # Max link depth from start URLs
+  robotstxt_obey: true        # Respect robots.txt
+
+  # Autothrottle settings for adaptive rate limiting
+  autothrottle:
+    enabled: true
+    start_delay: 2
+    max_delay: 15
+    target_concurrency: 0.5
+
+  # URL pattern matching
+  patterns:
+    # Patterns that identify listing/search pages (will be crawled for links)
+    listing:
+      - "/courses"
+      - "/catalog"
+      - "/search"
+
+    # Patterns that identify course detail pages (will be stored for processing)
+    course_detail:
+      - "/courses/\\d+"       # Regex: /courses/123
+      - "/course/"
+      - "/product/"
+
+    # Patterns to skip (never crawl these URLs)
+    skip:
+      - "/cart"
+      - "/checkout"
+      - "/login"
+      - "/register"
+      - "/account"
+      - "/signup"
+      - "/password"
+
+selectors:
+  # CSS selectors for extracting course links from listing pages
+  course_links:
+    css: ".course-card a::attr(href)"
+    fallback_css: "a[href*='/courses/']::attr(href)"
+
+  # Pagination selectors (optional)
+  pagination:
+    css: ".pagination a::attr(href)"
+
+  # XPath alternatives (optional, use when CSS is insufficient)
+  # course_links_xpath: "//div[@class='course']//a/@href"
+
+# Provider-specific metadata (optional)
+metadata:
+  description: "Brief description of the provider"
+  website: "https://www.example.com"
+  contact: "support@example.com"
+  license_types:
+    - "LMFT"
+    - "LCSW"
+    - "LPCC"
+  states:
+    - "CA"
+    - "NY"

@@ -1,0 +1,42 @@
+# Production Environment Configuration
+
+environment: production
+
+storage:
+  # Use hybrid backend for AWS Glue compatibility
+  backend: hybrid
+
+  # S3 settings for raw HTML storage
+  s3:
+    bucket: "${S3_BUCKET:-ceu-crawler-prod}"
+    prefix: "raw_html/"
+    region: "${AWS_REGION:-us-east-1}"
+
+  # Postgres for metadata and processed courses
+  postgres:
+    host: "${DB_HOST}"
+    port: "${DB_PORT:-5432}"
+    database: "${DB_NAME:-ceu_db}"
+    user: "${DB_USER}"
+    password: "${DB_PASSWORD}"
+
+# Crawl settings for production
+crawl:
+  download_delay: 8
+  max_pages_default: 500
+
+  # Disable HTTP caching in production
+  httpcache:
+    enabled: false
+
+# Logging
+logging:
+  level: INFO
+  format: "%(asctime)s [%(name)s] %(levelname)s: %(message)s"
+
+# AWS Glue configuration
+glue:
+  enabled: true
+  database: "ceu_catalog"
+  table_prefix: "raw_"
+  crawler_role: "${GLUE_CRAWLER_ROLE}"

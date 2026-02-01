@@ -1,0 +1,35 @@
+# Local Development Environment Configuration
+
+environment: local
+
+storage:
+  backend: postgres
+
+  postgres:
+    host: localhost
+    port: 5432
+    database: ceu_db
+    user: postgres
+    password: postgres
+
+# Crawl settings for local development
+crawl:
+  # Override global settings for faster local testing
+  download_delay: 3
+  max_pages_default: 50
+
+  # HTTP caching for development
+  httpcache:
+    enabled: true
+    expiration_secs: 3600
+    dir: ".scrapy_cache"
+
+# Logging
+logging:
+  level: DEBUG
+  format: "%(asctime)s [%(name)s] %(levelname)s: %(message)s"
+
+# Output settings
+output:
+  dir: "./output"
+  format: json

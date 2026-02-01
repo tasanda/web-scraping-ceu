@@ -372,7 +372,10 @@ cd crawler/tutorial
 source ../../.venv/bin/activate
 
 # Run with verbose logging (INFO level)
-scrapy crawl html_collector -a provider=pesi -a max_pages=5 -L INFO
+scrapy crawl html_collector -a provider=pesi -a max_pages=3 -L INFO
+
+# Run with verbose logging (INFO level) and Save all output to file for later review
+scrapy crawl html_collector -a provider=pesi -a max_pages=5 -L INFO 2>&1 | tee crawler_output.log
 
 # Run with debug logging (very verbose)
 scrapy crawl html_collector -a provider=pesi -a max_pages=5 -L DEBUG

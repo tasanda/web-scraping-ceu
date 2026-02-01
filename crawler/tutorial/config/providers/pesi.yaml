@@ -1,0 +1,48 @@
+name: pesi
+display_name: "PESI Inc."
+active: true
+
+domains:
+  - base_url: "https://www.pesi.com"
+    primary: true
+
+crawl:
+  start_urls:
+    - "https://www.pesi.com/"
+  download_delay: 8
+  randomize_download_delay: true
+  concurrent_requests: 1
+  concurrent_requests_per_domain: 1
+  depth_limit: 3
+  robotstxt_obey: true
+  autothrottle:
+    enabled: true
+    start_delay: 3
+    max_delay: 15
+    target_concurrency: 0.5
+
+  patterns:
+    listing:
+      - "/search"
+      - "/courses"
+      - "/products"
+      - "/store"
+    course_detail:
+      - "/product/"
+      - "/course/"
+      - "/sales/"
+      - "/item/"
+    skip:
+      - "/cart"
+      - "/checkout"
+      - "/account"
+      - "/login"
+      - "/register"
+      - "/signup"
+
+selectors:
+  course_links:
+    css: ".fcSlide .cardItem .name a::attr(href)"
+    fallback_css: "a[href*='/sales/']::attr(href), a[href*='/item/']::attr(href)"
+  pagination:
+    css: ".pagination a::attr(href)"
